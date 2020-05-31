@@ -1,19 +1,13 @@
+
+(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(window.document);
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
   (global = global || self, global.Vue = factory());
 }(this, (function () { 'use strict';
 
-  function toCaption(str) {
-    if (typeof str !== 'string') throw Error('toCaption\'s parmas must be a string');
-    return str.slice(0, 1).toUpperCase() + str.slice(1);
-  }
-
   function isObject(data) {
     return data && typeof data === 'object';
-  }
-  function isType(data, type) {
-    return {}.toString.call(data) === `[object ${toCaption(type)}]`;
   }
   function def(data, key, val) {
     Object.defineProperty(data, key, {
@@ -94,7 +88,6 @@
   }
 
   function observe(data) {
-    console.log('observe', data, isType(data, 'object'));
     if (!isObject(data)) return;
     return new Observer(data);
   }
@@ -147,7 +140,78 @@
     console.log('init watch');
   }
 
+  const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z]*`;
+  const qnameCapture = `((?:${ncname}\\:)?${ncname})`;
+  const startTagOpen = new RegExp(`^<${qnameCapture}`);
+  const startTagClose = /^\s*(\/?)>/;
+  const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`);
+  const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
+
+  function parserHTML(html) {
+    while (html) {
+      let textEnd = html.indexOf('<');
+
+      if (textEnd === 0) {
+        let startTagMatch = parseStartTag();
+
+        if (startTagMatch) {
+          continue;
+        }
+
+        let endTagMatch = html.match(endTag);
+
+        if (endTagMatch) {
+          advance(endTagMatch[0].length);
+          continue;
+        }
+      }
+
+      let text;
+
+      if (textEnd >= 0) {
+        text = html.substring(0, textEnd);
+      }
+
+      if (text) {
+        advance(text.length);
+      }
+    }
+
+    function advance(n) {
+      html = html.substring(n);
+    }
+
+    function parseStartTag() {
+      let start = html.match(startTagOpen);
+
+      if (start) {
+        const match = {
+          tagName: start[1],
+          attrs: []
+        };
+        advance(start[0].length);
+        let end;
+        let attr;
+
+        while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+          advance(attr[0].length);
+          match.attrs.push({
+            name: attr[1],
+            value: attr[3] || attr[4] || attr[5]
+          });
+        }
+
+        if (end) {
+          advance(end[0].length);
+          console.log(match, html);
+          return match;
+        }
+      }
+    }
+  }
+
   function compileToFunction(templete) {
+    parserHTML(templete);
     return function render() {};
   }
 
@@ -171,16 +235,17 @@
         render = opts.render;
       } else if (opts.templete) {
         templete = opts.templete;
-        render = compileToFunction();
-        opts.render = render;
+        render = compileToFunction(templete);
       } else {
         templete = el.outerHTML;
+        render = compileToFunction(templete);
       }
+
+      opts.render = render;
     };
   }
 
   function Vue(options) {
-    // console.log(options)
     this._init(options);
   }
 

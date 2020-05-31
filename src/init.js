@@ -31,11 +31,12 @@ export function initMixin (Vue) {
     } else if (opts.templete) {
       templete = opts.templete
       render = compileToFunction(templete)
-      opts.render = render
     } else {
       templete = el.outerHTML
+      render = compileToFunction(templete)
     }
 
+    opts.render = render
 
 
   }
