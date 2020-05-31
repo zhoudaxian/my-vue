@@ -146,8 +146,54 @@
   const startTagClose = /^\s*(\/?)>/;
   const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`);
   const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
+  const stack = [];
+  const ELEMENT_TYPE = 3;
+  const TEXT_TYPE = 1;
+  let root = null;
+  let currentParent = null;
 
-  function parserHTML(html) {
+  function createASTElement(tag, attrs) {
+    return {
+      type: ELEMENT_TYPE,
+      tag,
+      attrs,
+      children: [],
+      parent: null
+    };
+  }
+
+  function start({
+    tag,
+    attrs
+  }) {
+    let el = createASTElement(tag, attrs);
+    if (!root) root = el;
+    currentParent = el;
+    stack.push(el);
+  }
+
+  function chars(text) {
+    text = text.trim();
+
+    if (text) {
+      currentParent.children.push({
+        text,
+        type: TEXT_TYPE
+      });
+    }
+  }
+
+  function end() {
+    let el = stack.pop();
+    currentParent = stack[stack.length - 1];
+
+    if (currentParent) {
+      el.parent = currentParent;
+      currentParent.children.push(el);
+    }
+  }
+
+  function parseHTML(html) {
     while (html) {
       let textEnd = html.indexOf('<');
 
@@ -155,12 +201,14 @@
         let startTagMatch = parseStartTag();
 
         if (startTagMatch) {
+          start(startTagMatch);
           continue;
         }
 
         let endTagMatch = html.match(endTag);
 
         if (endTagMatch) {
+          end();
           advance(endTagMatch[0].length);
           continue;
         }
@@ -173,6 +221,7 @@
       }
 
       if (text) {
+        chars(text);
         advance(text.length);
       }
     }
@@ -186,7 +235,7 @@
 
       if (start) {
         const match = {
-          tagName: start[1],
+          tag: start[1],
           attrs: []
         };
         advance(start[0].length);
@@ -203,15 +252,18 @@
 
         if (end) {
           advance(end[0].length);
-          console.log(match, html);
           return match;
         }
       }
     }
+
+    return root;
   }
 
   function compileToFunction(templete) {
-    parserHTML(templete);
+    // parse html
+    let root = parseHTML(templete);
+    console.log('1', root);
     return function render() {};
   }
 
