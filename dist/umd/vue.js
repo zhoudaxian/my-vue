@@ -147,8 +147,8 @@
   const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`);
   const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
   const stack = [];
-  const ELEMENT_TYPE = 3;
-  const TEXT_TYPE = 1;
+  const ELEMENT_TYPE = 1;
+  const TEXT_TYPE = 3;
   let root = null;
   let currentParent = null;
 
@@ -260,11 +260,85 @@
     return root;
   }
 
+  const ELEMENT_TYPE$1 = 1;
+  const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g;
+
+  function genProps(attrs) {
+    let str = '';
+    attrs.forEach(attr => {
+      switch (attr.name) {
+        case 'style':
+          let obj = {};
+          attr.value.split(';').forEach(item => {
+            const [key, val] = item.split(':');
+            obj[key] = val;
+          });
+          attr.value = obj;
+          break;
+      }
+
+      str += `"${attr.name}":${JSON.stringify(attr.value)},`;
+    });
+    return `{${str.slice(0, -1)}}`;
+  }
+
+  function genChildren(children) {
+    return `${children.map(genChild).join(',')}`;
+  }
+
+  function genChild(child) {
+    if (child.type === ELEMENT_TYPE$1) {
+      return generate(child);
+    } else {
+      let {
+        text
+      } = child;
+      let tokens = [];
+      let match = null;
+      let index = -1;
+      let lastIndex = defaultTagRE.lastIndex = 0;
+
+      while (match = defaultTagRE.exec(text)) {
+        index = match.index;
+
+        if (index > lastIndex) {
+          tokens.push(JSON.stringify(text.slice(lastIndex, index)));
+        }
+
+        tokens.push(`_s(${match[1].trim()})`);
+        lastIndex = index + match[0].length;
+      }
+
+      if (lastIndex < text.length) {
+        tokens.push(JSON.stringify(text.slice(lastIndex)));
+      }
+
+      return `_v(${tokens.join('+')})`;
+    }
+  }
+
+  function generate(el) {
+    const {
+      tag,
+      children,
+      attrs
+    } = el;
+    let code = `
+    _c("${tag}",
+      ${attrs && attrs.length > 0 ? genProps(attrs) : 'undefined'},
+      ${children && children.length > 0 ? genChildren(children) : ''}
+    )
+    `;
+    return code;
+  }
+
   function compileToFunction(templete) {
     // parse html
-    let root = parseHTML(templete);
-    console.log('1', root);
-    return function render() {};
+    const root = parseHTML(templete);
+    const code = generate(root);
+    const renderFn = new Function(`with(this){return ${code}}`);
+    console.log(root, code, renderFn);
+    return renderFn;
   }
 
   function initMixin(Vue) {

@@ -1,15 +1,17 @@
 
 import { parseHTML } from './parseHTML'
+import { generate } from './genCode'
 
 export function compileToFunction (templete) {
 
   // parse html
-  let root = parseHTML(templete)
+  const root = parseHTML(templete)
 
+  const code = generate(root)
 
-  console.log('1', root)
-  return function render () {
+  const renderFn = new Function(`with(this){return ${code}}`)
 
-  }
+  console.log(root, code, renderFn)
+  return renderFn
 }
 

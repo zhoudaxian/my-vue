@@ -7,8 +7,8 @@ const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s
 const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g
 
 const stack = []
-const ELEMENT_TYPE = 3
-const TEXT_TYPE = 1
+const ELEMENT_TYPE = 1
+const TEXT_TYPE = 3
 
 let root = null
 let currentParent = null
