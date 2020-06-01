@@ -35,7 +35,6 @@
   const arrayMethods = Object.create(oldArrayMethods);
   methods.forEach(method => {
     arrayMethods[method] = function (...args) {
-      console.log('arrayMethods');
       const ob = this.__ob__;
       let ret = oldArrayMethods[method].apply(this, args);
       let inserted;
@@ -340,12 +339,9 @@
       children,
       attrs
     } = el;
-    let code = `
-    _c("${tag}",
-      ${attrs && attrs.length > 0 ? genProps(attrs) : 'undefined'},
-      ${children && children.length > 0 ? genChildren(children) : ''}
-    )
-    `;
+    let code = `_c("${tag}",
+    ${attrs && attrs.length > 0 ? genProps(attrs) : 'undefined'},
+    ${children && children.length > 0 ? genChildren(children) : ''})`;
     return code;
   }
 
@@ -354,8 +350,49 @@
     const root = parseHTML(templete);
     const code = generate(root);
     const renderFn = new Function(`with(this){return ${code}}`);
-    console.log(root, code, renderFn);
     return renderFn;
+  }
+
+  class Watcher {
+    constructor(vm, exprOrFn, callback, options) {
+      this.vm = vm;
+      this.callback = callback;
+      this.options = options;
+      this.getter = exprOrFn;
+      this.get();
+    }
+
+    get() {
+      this.getter();
+    }
+
+    update() {}
+
+    notify() {}
+
+  }
+
+  function patch(oldVnode, vnode) {
+    console.log(oldVnode, vnode);
+  }
+
+  function mountComponent(vm, el) {
+    vm.$el = el;
+
+    let updateComponent = () => {
+      // return vdom
+      // vdom => dom
+      vm._update(vm._render());
+    }; // renderWatcher args->true
+
+
+    new Watcher(vm, updateComponent, () => {}, true);
+  }
+  function lifecycleMixin(Vue) {
+    Vue.prototype._update = function (vnode) {
+      const vm = this;
+      vm.$el = patch(vm.$el, vnode);
+    };
   }
 
   function initMixin(Vue) {
@@ -385,6 +422,50 @@
       }
 
       opts.render = render;
+      mountComponent(vm, el);
+    };
+  }
+
+  function vnode(tag, data, key, children, text) {
+    return {
+      tag,
+      data,
+      key,
+      children,
+      text
+    };
+  }
+
+  function createElement(tag, data = {}, ...children) {
+    const {
+      key
+    } = data;
+    key && delete data.key;
+    return vnode(tag, data, key, children, undefined);
+  }
+  function createTextNode(text) {
+    return vnode(undefined, undefined, undefined, undefined, text);
+  }
+
+  function renderMixin(Vue) {
+    Vue.prototype._c = function (...args) {
+      return createElement(...args);
+    };
+
+    Vue.prototype._v = function (text) {
+      return createTextNode(text);
+    };
+
+    Vue.prototype._s = function (val) {
+      return val == null ? '' : typeof val === 'object' ? JSON.stringify(val) : val;
+    };
+
+    Vue.prototype._render = function () {
+      const vm = this;
+      const {
+        render
+      } = vm.$options;
+      return render.call(vm);
     };
   }
 
@@ -393,6 +474,8 @@
   }
 
   initMixin(Vue);
+  renderMixin(Vue);
+  lifecycleMixin(Vue);
 
   return Vue;
 

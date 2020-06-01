@@ -57,12 +57,9 @@ function genChild (child) {
 export function generate (el) {
   const { tag, children, attrs } = el
 
-  let code = `
-    _c("${tag}",
-      ${ (attrs && attrs.length > 0) ? genProps(attrs) : 'undefined'},
-      ${ (children && children.length > 0) ? genChildren(children) : ''}
-    )
-    `
+  let code = `_c("${tag}",
+    ${(attrs && attrs.length > 0) ? genProps(attrs) : 'undefined'},
+    ${(children && children.length > 0) ? genChildren(children) : ''})`
 
   return code
 }

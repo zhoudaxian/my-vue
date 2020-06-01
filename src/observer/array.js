@@ -9,7 +9,6 @@ export const arrayMethods = Object.create(oldArrayMethods)
 
 methods.forEach(method => {
   arrayMethods[method] = function (...args) {
-    console.log('arrayMethods')
     const ob = this.__ob__
     let ret = oldArrayMethods[method].apply(this, args)
 

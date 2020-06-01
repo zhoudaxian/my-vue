@@ -11,7 +11,6 @@ export function compileToFunction (templete) {
 
   const renderFn = new Function(`with(this){return ${code}}`)
 
-  console.log(root, code, renderFn)
   return renderFn
 }
 

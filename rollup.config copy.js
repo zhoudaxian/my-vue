@@ -30,7 +30,5 @@ const config = {
 }
 
 isDev && config.plugins.concat(devPlugin)
-console.log(config.plugins)
-
 
 export default config
