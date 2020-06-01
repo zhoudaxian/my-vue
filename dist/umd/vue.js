@@ -17,6 +17,18 @@
       value: val
     });
   }
+  function proxy(vm, source, key) {
+    Object.defineProperty(vm, key, {
+      get() {
+        return vm[source][key];
+      },
+
+      set(newVal) {
+        vm[source][key] = newVal;
+      }
+
+    });
+  }
 
   const methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
   const oldArrayMethods = Array.prototype;
@@ -128,6 +140,11 @@
   function initData(vm) {
     let data = vm.$options.data;
     vm._data = data = typeof data === 'function' ? data.call(vm) : data;
+
+    for (let p in data) {
+      proxy(vm, '_data', p);
+    }
+
     observe(data);
     console.log('init data', data);
   }

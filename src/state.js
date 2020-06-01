@@ -1,4 +1,6 @@
 import { observe } from './observer/index.js'
+import { proxy } from './util/index.js'
+
 export function initState (vm) {
   console.log('init state')
 
@@ -39,6 +41,10 @@ function initMethod (vm) {
 function initData (vm) {
   let data = vm.$options.data
   vm._data = data = typeof data === 'function' ? data.call(vm) : data
+
+  for (let p in data) {
+    proxy(vm, '_data', p)
+  }
 
   observe(data)
   console.log('init data', data)
