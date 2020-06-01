@@ -432,7 +432,8 @@
       data,
       key,
       children,
-      text
+      text,
+      componentOptios: {}
     };
   }
 

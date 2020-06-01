@@ -2,7 +2,12 @@
 
 function vnode (tag, data, key, children, text) {
   return {
-    tag, data, key, children, text
+    tag,
+    data,
+    key,
+    children,
+    text,
+    componentOptios: {}
   }
 }
 
