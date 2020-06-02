@@ -31,7 +31,19 @@
         ]
       },
       // computed:{},
-      // methods:{}
+      // methods:{},
+      beforeCreate(){
+        console.log('beforeCreate',)
+      },
+      created(){
+        console.log('created',)
+      },
+      beforeMount(){
+        console.log('beforeMount',this.$el)
+      },
+      // mounted(){
+      //   console.log('mounted',this.$el)
+      // }
     })
 
     // setTimeout(() => {

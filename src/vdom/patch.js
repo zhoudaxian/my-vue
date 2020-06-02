@@ -32,7 +32,6 @@ function updateProps (vnode) {
 }
 
 export function patch (oldVnode, vnode) {
-  console.log(oldVnode, vnode)
 
   const isRealElement = oldVnode.nodeType
 
@@ -43,5 +42,7 @@ export function patch (oldVnode, vnode) {
     const el = creatElm(vnode)
     parentElm.insertBefore(el, oldElm.nextSibling)
     parentElm.removeChild(oldElm)
+
+    return el
   }
 }

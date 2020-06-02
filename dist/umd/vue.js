@@ -29,6 +29,40 @@
 
     });
   }
+  const LIFTCYCLE_HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestory', 'destotyed', 'activated', 'deactivated', 'errorCaptured'];
+  const strats = {};
+  LIFTCYCLE_HOOKS.forEach(hook => strats[hook] = mergeHook);
+
+  function mergeHook(targetHooks, sourceHooks) {
+    if (sourceHooks) {
+      return targetHooks ? targetHooks.concat(sourceHooks) : [sourceHooks];
+    }
+
+    return targetHooks;
+  }
+
+  function mergeOptions(target, source) {
+    const opts = {};
+    const targetKeys = Object.keys(target);
+    const sourceKeys = Object.keys(source);
+    targetKeys.forEach(key => {
+      if (LIFTCYCLE_HOOKS.includes(key)) {
+        opts[key] = strats[key](target[key], source[key]);
+      } else if (isObject(key)) {
+        opts[key] = mergeOptions(target[key], source[key]);
+      } else {
+        opts[key] = source[key] == null ? target[key] : source[key];
+      }
+    });
+    sourceKeys.forEach(key => {
+      if (LIFTCYCLE_HOOKS.includes(key)) {
+        opts[key] = strats[key](target[key], source[key]);
+      } else if (!opts[key]) {
+        opts[key] = source[key];
+      }
+    });
+    return opts;
+  }
 
   const methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
   const oldArrayMethods = Array.prototype;
@@ -417,7 +451,6 @@
   }
 
   function patch(oldVnode, vnode) {
-    console.log(oldVnode, vnode);
     const isRealElement = oldVnode.nodeType;
 
     if (isRealElement) {
@@ -426,20 +459,22 @@
       const el = creatElm(vnode);
       parentElm.insertBefore(el, oldElm.nextSibling);
       parentElm.removeChild(oldElm);
+      return el;
     }
   }
 
+  let updateComponent = vm => {
+    // return vdom
+    // vdom => dom
+    vm._update(vm._render());
+  };
+
   function mountComponent(vm, el) {
     vm.$el = el;
+    callHook(vm, 'beforeMount'); // renderWatcher args->true
 
-    let updateComponent = () => {
-      // return vdom
-      // vdom => dom
-      vm._update(vm._render());
-    }; // renderWatcher args->true
-
-
-    new Watcher(vm, updateComponent, () => {}, true);
+    new Watcher(vm, () => updateComponent(vm), () => {}, true);
+    callHook(vm, 'mounted');
   }
   function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
@@ -447,13 +482,18 @@
       vm.$el = patch(vm.$el, vnode);
     };
   }
+  function callHook(vm, hook) {
+    const handlers = vm.$options[hook];
+    handlers && handlers.forEach(handler => handler.call(vm));
+  }
 
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
-      console.log('_init');
       const vm = this;
-      vm.$options = options;
+      vm.$options = mergeOptions(vm.constructor.options, options);
+      callHook(vm, 'beforeCreate');
       initState(vm);
+      callHook(vm, 'created');
       if (vm.$options.el) vm.$mount(vm.$options.el);
     };
 
@@ -523,6 +563,14 @@
     };
   }
 
+  function initGlobalAPI(Vue) {
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      this.options = mergeOptions(this.options, mixin);
+    };
+  }
+
   function Vue(options) {
     this._init(options);
   }
@@ -530,6 +578,7 @@
   initMixin(Vue);
   renderMixin(Vue);
   lifecycleMixin(Vue);
+  initGlobalAPI(Vue);
 
   return Vue;
 
