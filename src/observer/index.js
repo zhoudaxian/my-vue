@@ -2,11 +2,12 @@ import { isObject, isType, def } from '../util/index'
 import { arrayMethods } from './array.js'
 import Dep from './dep'
 
+let n = 0
 
 class Observer {
   constructor (data) {
     this.dep = new Dep()
-
+    console.log(++n, Array.isArray(data))
     def(data, '__ob__', this)
 
     if (Array.isArray(data)) {
@@ -45,9 +46,16 @@ function defineReactive (data, key, val) {
     get () {
       if (Dep.target) {
         dep.depend()
+
+        // array dep收集watcher
         if (childOb) {
-          childOb.dep.depend()  // array dep收集watcher
+          childOb.dep.depend()
+
+          if (Array.isArray(val)) {
+            dependArray(val)
+          }
         }
+
       }
       return val
     },
@@ -64,4 +72,15 @@ export function observe (data) {
   if (!isObject(data)) return
 
   return new Observer(data)
+}
+
+
+function dependArray (arr) {
+  arr.forEach(val => {
+    const { __ob__: ob } = val
+    ob && ob.dep.depend()
+    if (Array.isArray(val)) {
+      dependArray(val)
+    }
+  })
 }

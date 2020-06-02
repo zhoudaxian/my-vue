@@ -14,6 +14,7 @@ export default class Dep {
     this.subs.push(watcher)
   }
 
+  // 收集依赖
   depend () {
     Dep.target.addDep(this)
   }

@@ -100,7 +100,8 @@
 
     addSub(watcher) {
       this.subs.push(watcher);
-    }
+    } // 收集依赖
+
 
     depend() {
       Dep.target.addDep(this);
@@ -121,9 +122,12 @@
     Dep.target = stack[stack.length - 1];
   }
 
+  let n = 0;
+
   class Observer {
     constructor(data) {
       this.dep = new Dep();
+      console.log(++n, Array.isArray(data));
       def(data, '__ob__', this);
 
       if (Array.isArray(data)) {
@@ -158,10 +162,14 @@
 
       get() {
         if (Dep.target) {
-          dep.depend();
+          dep.depend(); // array dep收集watcher
 
           if (childOb) {
-            childOb.dep.depend(); // array dep收集watcher
+            childOb.dep.depend();
+
+            if (Array.isArray(val)) {
+              dependArray(val);
+            }
           }
         }
 
@@ -181,6 +189,19 @@
   function observe(data) {
     if (!isObject(data)) return;
     return new Observer(data);
+  }
+
+  function dependArray(arr) {
+    arr.forEach(val => {
+      const {
+        __ob__: ob
+      } = val;
+      ob && ob.dep.depend();
+
+      if (Array.isArray(val)) {
+        dependArray(val);
+      }
+    });
   }
 
   function initState(vm) {
