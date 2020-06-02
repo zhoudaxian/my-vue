@@ -1,11 +1,8 @@
-
-
 const methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice']
 
 const oldArrayMethods = Array.prototype
 
 export const arrayMethods = Object.create(oldArrayMethods)
-
 
 methods.forEach(method => {
   arrayMethods[method] = function (...args) {
@@ -26,7 +23,7 @@ methods.forEach(method => {
     }
 
     if (inserted) ob.observerArray(inserted)
-    console.log(ob.dep)
+
     ob.dep.notify()
 
     return ret

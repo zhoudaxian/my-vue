@@ -2,12 +2,10 @@ import { isObject, isType, def } from '../util/index'
 import { arrayMethods } from './array.js'
 import Dep from './dep'
 
-let n = 0
-
 class Observer {
   constructor (data) {
     this.dep = new Dep()
-    console.log(++n, Array.isArray(data))
+
     def(data, '__ob__', this)
 
     if (Array.isArray(data)) {

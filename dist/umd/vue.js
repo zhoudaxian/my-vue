@@ -84,7 +84,6 @@
       }
 
       if (inserted) ob.observerArray(inserted);
-      console.log(ob.dep);
       ob.dep.notify();
       return ret;
     };
@@ -122,12 +121,9 @@
     Dep.target = stack[stack.length - 1];
   }
 
-  let n = 0;
-
   class Observer {
     constructor(data) {
       this.dep = new Dep();
-      console.log(++n, Array.isArray(data));
       def(data, '__ob__', this);
 
       if (Array.isArray(data)) {
@@ -454,6 +450,54 @@
     return renderFn;
   }
 
+  let callbacks = [];
+  let waiting = false; //  Promise  setImmediate  setTimeout
+
+  function useAsyncFunc(cb) {
+    if (Promise) {
+      Promise.resolve().then(cb);
+    } else if (setImmediate) {
+      setImmediate(cb);
+    } else {
+      setTimeout(cb, 0);
+    }
+  }
+
+  function flushCallbacks() {
+    callbacks.forEach(cb => cb());
+    waiting = false;
+  } // 值的改变会先放入callbacks，手动调用会在其后
+
+
+  function nextTick(callback) {
+    // 多次调用nextTick，正在刷新的时候放在callbacks中
+    callbacks.push(callback);
+
+    if (!waiting) {
+      useAsyncFunc(flushCallbacks);
+      waiting = true;
+    }
+  }
+
+  let queue = [];
+  let has = {};
+
+  function flushSchedulerQueue() {
+    queue.forEach(watcher => watcher.run());
+    queue = [];
+    has = {};
+  }
+
+  function queueWatcher(watcher) {
+    const id = watcher.id;
+
+    if (!has[id]) {
+      has[id] = true;
+      queue.push(watcher);
+      nextTick(flushSchedulerQueue);
+    }
+  }
+
   let id$1 = 0;
 
   class Watcher {
@@ -499,6 +543,10 @@
     }
 
     update() {
+      queueWatcher(this);
+    }
+
+    run() {
       this.get();
     }
 
@@ -612,6 +660,8 @@
       opts.render = render;
       mountComponent(vm, el);
     };
+
+    Vue.prototype.$nextTick = nextTick;
   }
 
   function vnode(tag, data, key, children, text) {
