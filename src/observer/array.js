@@ -19,13 +19,15 @@ methods.forEach(method => {
       case 'unshift':
         inserted = args;
         break;
-      case splice:
+      case 'splice':
         inserted = args.slice(2)
       default:
         break;
     }
 
     if (inserted) ob.observerArray(inserted)
+    console.log(ob.dep)
+    ob.dep.notify()
 
     return ret
   }

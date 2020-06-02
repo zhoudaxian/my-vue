@@ -1,10 +1,12 @@
 import { isObject, isType, def } from '../util/index'
 import { arrayMethods } from './array.js'
+import Dep from './dep'
+
 
 class Observer {
   constructor (data) {
+    this.dep = new Dep()
 
-    // data.__ob__ = this
     def(data, '__ob__', this)
 
     if (Array.isArray(data)) {
@@ -15,6 +17,7 @@ class Observer {
     }
 
   }
+
   observerArray (data) {
     data.forEach(val => {
       observe(val)
@@ -32,17 +35,28 @@ class Observer {
 }
 
 function defineReactive (data, key, val) {
-  observe(val)
+  const dep = new Dep()
+
+  const childOb = observe(val)
+
   Object.defineProperty(data, key, {
     configurable: true,
     enumerable: true,
     get () {
+      if (Dep.target) {
+        dep.depend()
+        if (childOb) {
+          childOb.dep.depend()  // array dep收集watcher
+        }
+      }
       return val
     },
     set (newVal) {
       if (newVal === val) return
       observe(newVal)
       val = newVal
+
+      dep.notify()
     }
   })
 }

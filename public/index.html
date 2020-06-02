@@ -11,7 +11,23 @@
     hello world
     <p>姓名: {{name}}</p>
     <p>年龄: {{age}}</p>
+    <p>地址: {{addr.province}}/{{addr.city}}</p>
+    <ul>
+      <li>{{hobies[0]}}</li>
+      <li>{{hobies[1]}}</li>
+      <li>{{hobies[2]}}</li>
+    </ul>
+    <p>{{cycle}}</p>
   </div>
+
+
+    <!-- <p>地址: {{addr.province}}{{addr.city}}</p> -->
+    <!-- <ul>
+      <li>{{hobies[0]}}</li>
+      <li>{{hobies[1]}}</li>
+      <li>{{hobies[2]}}</li>
+    </ul> -->
+
 
   <script src="/dist/umd/vue.js"></script>
 
@@ -21,6 +37,7 @@
       data: {
         name: 'Json',
         age: 18,
+        cycle: {cycle: 100},
         addr : {
           province: 'GD',
           city: 'SZ'
@@ -33,24 +50,35 @@
       // computed:{},
       // methods:{},
       beforeCreate(){
-        console.log('beforeCreate',)
+        // console.log('beforeCreate',)
       },
       created(){
-        console.log('created',)
+        // console.log('created',)
       },
       beforeMount(){
-        console.log('beforeMount',this.$el)
+        // console.log('beforeMount',this.$el)
       },
       // mounted(){
       //   console.log('mounted',this.$el)
       // }
     })
 
-    // setTimeout(() => {
-    //   vm.age = 22
-    //   vm.hobies.push('h3')
-    //   console.log(vm._data.age,vm._data.hobies)
-    // }, 1000);
+    setTimeout(() => {
+      vm.age = 22
+      vm.hobies.push('h3')
+      vm.hobies[1] = 'h2h2'
+      vm.addr.city = 'gz'
+      console.log(vm.age,vm.hobies)
+    }, 1000);
+
+    setTimeout(() => {
+      vm.hobies.pop()
+      vm.addr = {
+        province : 'xx',
+        city: 'yy'
+      }
+      console.log('pop',vm.hobies)
+    }, 2000);
 
   </script>
 </body>

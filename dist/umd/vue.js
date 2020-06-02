@@ -79,18 +79,51 @@
           inserted = args;
           break;
 
-        case splice:
+        case 'splice':
           inserted = args.slice(2);
       }
 
       if (inserted) ob.observerArray(inserted);
+      console.log(ob.dep);
+      ob.dep.notify();
       return ret;
     };
   });
 
+  let id = 0;
+  const stack = [];
+  class Dep {
+    constructor() {
+      this.id = id++;
+      this.subs = [];
+    }
+
+    addSub(watcher) {
+      this.subs.push(watcher);
+    }
+
+    depend() {
+      Dep.target.addDep(this);
+    }
+
+    notify() {
+      this.subs.forEach(watcher => watcher.update());
+    }
+
+  }
+  Dep.target = null;
+  function pushTarget(watcher) {
+    Dep.target = watcher;
+    stack.push(watcher);
+  }
+  function popTarget() {
+    stack.pop();
+    Dep.target = stack[stack.length - 1];
+  }
+
   class Observer {
     constructor(data) {
-      // data.__ob__ = this
+      this.dep = new Dep();
       def(data, '__ob__', this);
 
       if (Array.isArray(data)) {
@@ -117,12 +150,21 @@
   }
 
   function defineReactive(data, key, val) {
-    observe(val);
+    const dep = new Dep();
+    const childOb = observe(val);
     Object.defineProperty(data, key, {
       configurable: true,
       enumerable: true,
 
       get() {
+        if (Dep.target) {
+          dep.depend();
+
+          if (childOb) {
+            childOb.dep.depend(); // array dep收集watcher
+          }
+        }
+
         return val;
       },
 
@@ -130,6 +172,7 @@
         if (newVal === val) return;
         observe(newVal);
         val = newVal;
+        dep.notify();
       }
 
     });
@@ -199,7 +242,7 @@
   const startTagClose = /^\s*(\/?)>/;
   const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`);
   const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
-  const stack = [];
+  const stack$1 = [];
   const ELEMENT_TYPE = 1;
   const TEXT_TYPE = 3;
   let root = null;
@@ -222,7 +265,7 @@
     let el = createASTElement(tag, attrs);
     if (!root) root = el;
     currentParent = el;
-    stack.push(el);
+    stack$1.push(el);
   }
 
   function chars(text) {
@@ -237,8 +280,8 @@
   }
 
   function end() {
-    let el = stack.pop();
-    currentParent = stack[stack.length - 1];
+    let el = stack$1.pop();
+    currentParent = stack$1[stack$1.length - 1];
 
     if (currentParent) {
       el.parent = currentParent;
@@ -390,22 +433,53 @@
     return renderFn;
   }
 
+  let id$1 = 0;
+
   class Watcher {
     constructor(vm, exprOrFn, callback, options) {
       this.vm = vm;
       this.callback = callback;
       this.options = options;
-      this.getter = exprOrFn;
+      this.id = id$1++;
+      this.depsId = new Set();
+      this.deps = [];
+      this.getter = exprOrFn; // new Watcher(vm, () => updateComponent(vm), () => { }, true)
+      // 对于render watcher来讲，调用get/update方法 即调用updateComponent 去更新组件 PS：组件级更新
+      // 注册 render watcher 是在beforeCreate 与created之间 mountComponent方法里
+      // beforeCreate -> initState
+      //  -> initData -> oberser -> defineReactive  ->
+      // created -> $mounted -> 生成render函数 -> 调用mountComponent ->
+      // beforeMount -> new Watcher(vm, () => updateComponent(vm), () => { }, true) // 会去读取数据，收集依赖 ->
+      // mounted
+      // 1.在组件初始化数据的时候，将数据变成响应式（Object.defineProperty）
+      // 2.编辑模板生成render函数，
+      // new Watcher(vm, () => updateComponent(vm), () => { }, true)
+      // 3.添加renderwatcher,在newwatcher时，去调用get方法即vm._update(vm._render())。 生成vdom 生成真实dom ，挂载
+
       this.get();
     }
 
-    get() {
-      this.getter();
+    addDep(dep) {
+      const {
+        id
+      } = dep;
+
+      if (!this.depsId.has(id)) {
+        this.depsId.add(id);
+        this.deps.push(dep);
+        dep.addSub(this);
+      }
     }
 
-    update() {}
+    get() {
+      pushTarget(this);
+      this.getter();
+      popTarget();
+    }
 
-    notify() {}
+    update() {
+      this.get();
+    }
 
   }
 
